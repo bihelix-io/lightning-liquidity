@@ -21,9 +21,11 @@ use crate::sync::{Arc, Mutex, RwLock};
 use lightning::events::HTLCDestination;
 use lightning::ln::channelmanager::{AChannelManager, InterceptId};
 use lightning::ln::msgs::{ErrorAction, LightningError};
-use lightning::ln::{ChannelId, PaymentHash};
+use lightning::ln::types::ChannelId;
 use lightning::util::errors::APIError;
 use lightning::util::logger::Level;
+
+use lightning_types::payment::PaymentHash;
 
 use bitcoin::secp256k1::PublicKey;
 

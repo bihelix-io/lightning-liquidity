@@ -9,7 +9,7 @@ use lightning::sign::EntropySource;
 
 use bitcoin::blockdata::constants::{genesis_block, ChainHash};
 use bitcoin::blockdata::transaction::Transaction;
-use bitcoin::network::constants::Network;
+use bitcoin::Network;
 use lightning::chain::channelmonitor::ANTI_REORG_DELAY;
 use lightning::chain::{chainmonitor, BestBlock, Confirm};
 use lightning::ln::channelmanager;
@@ -35,7 +35,7 @@ use lightning::util::test_utils;
 use lightning_liquidity::{LiquidityClientConfig, LiquidityManager, LiquidityServiceConfig};
 use lightning_persister::fs_store::FilesystemStore;
 
-use std::collections::VecDeque;
+use std::collections::{HashMap, VecDeque};
 use std::path::PathBuf;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::mpsc::SyncSender;
@@ -143,10 +143,10 @@ impl Drop for Node {
 }
 
 struct Persister {
-	graph_error: Option<(std::io::ErrorKind, &'static str)>,
+	graph_error: Option<(lightning::io::ErrorKind, &'static str)>,
 	graph_persistence_notifier: Option<SyncSender<()>>,
-	manager_error: Option<(std::io::ErrorKind, &'static str)>,
-	scorer_error: Option<(std::io::ErrorKind, &'static str)>,
+	manager_error: Option<(lightning::io::ErrorKind, &'static str)>,
+	scorer_error: Option<(lightning::io::ErrorKind, &'static str)>,
 	kv_store: FilesystemStore,
 }
 
@@ -162,7 +162,7 @@ impl Persister {
 		}
 	}
 
-	fn with_graph_error(self, error: std::io::ErrorKind, message: &'static str) -> Self {
+	fn with_graph_error(self, error: lightning::io::ErrorKind, message: &'static str) -> Self {
 		Self { graph_error: Some((error, message)), ..self }
 	}
 
@@ -170,11 +170,11 @@ impl Persister {
 		Self { graph_persistence_notifier: Some(sender), ..self }
 	}
 
-	fn with_manager_error(self, error: std::io::ErrorKind, message: &'static str) -> Self {
+	fn with_manager_error(self, error: lightning::io::ErrorKind, message: &'static str) -> Self {
 		Self { manager_error: Some((error, message)), ..self }
 	}
 
-	fn with_scorer_error(self, error: std::io::ErrorKind, message: &'static str) -> Self {
+	fn with_scorer_error(self, error: lightning::io::ErrorKind, message: &'static str) -> Self {
 		Self { scorer_error: Some((error, message)), ..self }
 	}
 }
@@ -194,7 +194,7 @@ impl KVStore for Persister {
 			&& key == CHANNEL_MANAGER_PERSISTENCE_KEY
 		{
 			if let Some((error, message)) = self.manager_error {
-				return Err(std::io::Error::new(error, message));
+				return Err(lightning::io::Error::new(error, message));
 			}
 		}
 
@@ -212,7 +212,7 @@ impl KVStore for Persister {
 			};
 
 			if let Some((error, message)) = self.graph_error {
-				return Err(std::io::Error::new(error, message));
+				return Err(lightning::io::Error::new(error, message));
 			}
 		}
 
@@ -221,7 +221,7 @@ impl KVStore for Persister {
 			&& key == SCORER_PERSISTENCE_KEY
 		{
 			if let Some((error, message)) = self.scorer_error {
-				return Err(std::io::Error::new(error, message));
+				return Err(lightning::io::Error::new(error, message));
 			}
 		}
 
@@ -362,9 +362,6 @@ impl ScoreUpdate for TestScorer {
 	fn time_passed(&mut self, _: Duration) {}
 }
 
-#[cfg(c_bindings)]
-impl lightning::routing::scoring::Score for TestScorer {}
-
 impl Drop for TestScorer {
 	fn drop(&mut self) {
 		if std::thread::panicking() {
@@ -390,7 +387,9 @@ pub(crate) fn create_liquidity_node(
 	client_config: Option<LiquidityClientConfig>,
 ) -> Node {
 	let tx_broadcaster = Arc::new(test_utils::TestBroadcaster::new(network));
-	let fee_estimator = Arc::new(test_utils::TestFeeEstimator { sat_per_kw: Mutex::new(253) });
+	let target_override = Mutex::new(HashMap::new());
+	let fee_estimator =
+		Arc::new(test_utils::TestFeeEstimator { sat_per_kw: Mutex::new(253), target_override });
 	let logger = Arc::new(test_utils::TestLogger::with_id(format!("node {}", i)));
 	let genesis_block = genesis_block(network);
 	let network_graph = Arc::new(NetworkGraph::new(network, logger.clone()));
