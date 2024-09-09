@@ -30,6 +30,7 @@ jobs:
         run: |
           cargo update -p proptest --precise "1.2.0" --verbose # proptest 1.3.0 requires rustc 1.64.0
           cargo update -p regex --precise "1.9.6" --verbose # regex 1.10.0 requires rustc 1.65.0.
+          cargo update -p tokio --precise "1.38.1" --verbose # tokio v1.39.0 requires rustc 1.70 or newer
       - name: Cargo check
         run: cargo check --release
       - name: Check documentation

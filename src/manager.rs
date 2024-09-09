@@ -569,6 +569,13 @@ where
 
 		features
 	}
+
+	fn peer_disconnected(&self, _: &bitcoin::secp256k1::PublicKey) {}
+	fn peer_connected(
+		&self, _: &bitcoin::secp256k1::PublicKey, _: &lightning::ln::msgs::Init, _: bool,
+	) -> Result<(), ()> {
+		Ok(())
+	}
 }
 
 impl<ES: Deref + Clone, CM: Deref + Clone, C: Deref + Clone> Listen for LiquidityManager<ES, CM, C>
